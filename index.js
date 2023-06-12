@@ -33,8 +33,17 @@ async function run() {
         // Users related APIs
         app.post("/users", async (req, res) => {
             const user = req.body;
-            const result = await usersCollection.insertOne(user);
-            res.send(result);
+            console.log(user);
+            // Checking the user is already in the database collection or, not || Specially, needed for the 'Social Log In System'.
+            const query = { email: user.email };
+            const existingUser = await usersCollection.findOne(query);
+            if (existingUser) {
+                return res.send({ message: "User already exists." })
+            }
+            else {
+                const result = await usersCollection.insertOne(user);
+                res.send(result);
+            };
         });
 
 
