@@ -27,16 +27,28 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
+
         // Creating a collection in the database for storing signed-up user's information
         const usersCollection = client.db("kraftiDb").collection("users");
 
-        // Users related APIs
+
+        // ********** Users related APIs **********
+        // API of getting all users data in the client-side
+        app.get("/users", async (req, res) => {
+            const result = await usersCollection.find().toArray();
+            res.send(result);
+        });
+
+        // API of Sending users to DB
         app.post("/users", async (req, res) => {
-            const user = req.body;
-            console.log(user);
+            // const user = req.body;
+            console.log("Req for Adding User to DB:", user);
+
             // Checking the user is already in the database collection or, not || Specially, needed for the 'Social Log In System'.
             const query = { email: user.email };
             const existingUser = await usersCollection.findOne(query);
+            // console.log("Existing User:", existingUser);
+
             if (existingUser) {
                 return res.send({ message: "User already exists." })
             }
@@ -45,7 +57,6 @@ async function run() {
                 res.send(result);
             };
         });
-
 
 
         // Send a ping to confirm a successful connection
