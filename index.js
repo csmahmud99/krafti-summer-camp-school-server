@@ -10,7 +10,7 @@ app.use(express.json());
 
 // *********************MongoDB Connection code starts from here*********************
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@clusterkraftischool.5rzdjri.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -39,9 +39,10 @@ async function run() {
             res.send(result);
         });
 
+
         // API of Sending users to DB
         app.post("/users", async (req, res) => {
-            // const user = req.body;
+            // const user = req.body; 
             console.log("Req for Adding User to DB:", user);
 
             // Checking the user is already in the database collection or, not || Specially, needed for the 'Social Log In System'.
@@ -58,6 +59,19 @@ async function run() {
             };
         });
 
+
+        // API for updating a user's role info. as admin
+        app.patch("/users/admin/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    role: "admin"
+                }
+            };
+            const result = await usersCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
