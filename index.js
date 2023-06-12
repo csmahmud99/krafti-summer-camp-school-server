@@ -33,6 +33,13 @@ async function run() {
         // Creating a collection in the database for storing signed-up user's information
         const usersCollection = client.db("kraftiDb").collection("users");
 
+        // ********** JWT related APIs **********
+        app.post("/jwt", (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+            res.send({ token });
+        });
+
 
         // ********** Users related APIs **********
         // API of getting all users data in the client-side
@@ -44,8 +51,8 @@ async function run() {
 
         // API of Sending users to DB
         app.post("/users", async (req, res) => {
-            // const user = req.body; 
-            console.log("Req for Adding User to DB:", user);
+            const user = req.body; 
+            // console.log("Req for Adding User to DB:", user);
 
             // Checking the user is already in the database collection or, not || Specially, needed for the 'Social Log In System'.
             const query = { email: user.email };
