@@ -55,7 +55,7 @@ async function run() {
         // Creating a collection in the database for storing signed-up user's information
         const usersCollection = client.db("kraftiDb").collection("users");
 
-        
+
         // ********** JWT related APIs **********
         // API for JWT Access-token generation request on the client-side
         app.post("/jwt", (req, res) => {
@@ -65,9 +65,22 @@ async function run() {
         });
 
 
+        // 'verifyAdmin' middleware || Need MongoDB connection, so written inside it.
+        // WARNING: use 'verifyJWT' before using 'verifyAdmin'
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== "admin") {
+                return res.status(403).send({ error: true, message: "forbidden access" });
+            }
+            next();
+        };
+
+
         // ********** Users related APIs **********
         // API of getting all users data in the client-side
-        app.get("/users", verifyJWT, async (req, res) => {
+        app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
         });
@@ -90,6 +103,25 @@ async function run() {
                 const result = await usersCollection.insertOne(user);
                 res.send(result);
             };
+        });
+
+
+        // Basic/Primary Checking: API for checking if the user is admin or not
+        // 1st-level admin checking: User is valid/not, check by 'verifyJWT'.
+        app.get("/users/admin/:email", verifyJWT, async (req, res) => {
+            const email = req.params.email;
+
+            // 2nd-level admin checking: email inside token(decoded) and requested URL is same or not.
+            if (req.decoded.email !== email) {
+                res.send({ admin: false });
+            }
+
+            // N.B: 3rd-level admin checking: check admin by using a Custom-hook in the client-side. [see the hook: useAdmin.jsx]
+
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            const result = { admin: user?.role === "admin" };
+            res.send(result);
         });
 
 
