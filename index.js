@@ -125,6 +125,26 @@ async function run() {
         });
 
 
+        // Basic/Primary Checking: API for checking if the user is instructor or not
+        // 1st-level instructor checking: User is valid/not, check by 'verifyJWT'.
+        app.get("/users/instructor/:email", verifyJWT, async (req, res) => {
+            const email = req.params.email;
+
+            // 2nd-level instructor checking: email inside token(decoded) and requested URL is same or not.
+            if (req.decoded.email !== email) {
+                res.send({ instructor: false });
+            }
+
+            // N.B: 3rd-level instructor checking: check instructor by using a Custom-hook in the client-side. [see the hook: useInstructor.jsx]
+
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            const result = { admin: user?.role === "instructor" };
+            res.send(result);
+        });
+
+
+
         // API for updating a user's role info. as admin
         app.patch("/users/admin/:id", async (req, res) => {
             const id = req.params.id;
