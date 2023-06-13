@@ -78,6 +78,9 @@ async function run() {
         };
 
 
+
+
+
         // ********** Users related APIs **********
         // API of getting all users data in the client-side
         app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
@@ -139,7 +142,7 @@ async function run() {
 
             const query = { email: email };
             const user = await usersCollection.findOne(query);
-            const result = { admin: user?.role === "instructor" };
+            const result = { instructor: user?.role === "instructor" };
             res.send(result);
         });
 
