@@ -10,6 +10,28 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// JWT Middleware
+const verifyJWT = (req, res, next) => {
+    // Receiving of authorization-token from the user to check if the authorization-header is there or not
+    const authorization = req.headers.authorization;
+    // No authorization-header, means no token, means non-valid user
+    if (!authorization) {
+        return res.status(401).send({ error: true, message: "Unauthorized access" });
+    }
+    // Inside the authorization-header, something exists, it can be valid-token or not, have the both possibilities
+    // Trying to find the token from the authorization-header || bearer token; split it, will give 2 Arrays, token-part index number will be '1'.
+    const token = authorization.split(" ")[1];
+    // Verifying of the JWT token
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ error: true, message: "Unauthorized access" });
+        }
+        // If no-error is happened & the token is OK, then...
+        req.decoded = decoded;
+        next();
+    });
+};
+
 // *********************MongoDB Connection code starts from here*********************
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -33,7 +55,9 @@ async function run() {
         // Creating a collection in the database for storing signed-up user's information
         const usersCollection = client.db("kraftiDb").collection("users");
 
+        
         // ********** JWT related APIs **********
+        // API for JWT Access-token generation request on the client-side
         app.post("/jwt", (req, res) => {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
@@ -43,7 +67,7 @@ async function run() {
 
         // ********** Users related APIs **********
         // API of getting all users data in the client-side
-        app.get("/users", async (req, res) => {
+        app.get("/users", verifyJWT, async (req, res) => {
             const result = await usersCollection.find().toArray();
             res.send(result);
         });
@@ -51,7 +75,7 @@ async function run() {
 
         // API of Sending users to DB
         app.post("/users", async (req, res) => {
-            const user = req.body; 
+            const user = req.body;
             // console.log("Req for Adding User to DB:", user);
 
             // Checking the user is already in the database collection or, not || Specially, needed for the 'Social Log In System'.
