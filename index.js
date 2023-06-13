@@ -54,6 +54,7 @@ async function run() {
 
         // Creating a collection in the database for storing signed-up user's information
         const usersCollection = client.db("kraftiDb").collection("users");
+        const classesCollection = client.db("kraftiDb").collection("classes");
 
 
         // ********** JWT related APIs **********
@@ -78,7 +79,17 @@ async function run() {
         };
 
 
-
+        // 'verifyInstructor' middleware || Need MongoDB connection, so written inside it.
+        // WARNING: use 'verifyJWT' before using 'verifyInstructor'
+        const verifyInstructor = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            if (user?.role !== "instructor") {
+                return res.status(403).send({ error: true, message: "forbidden access" });
+            }
+            next();
+        };
 
 
         // ********** Users related APIs **********
@@ -171,6 +182,30 @@ async function run() {
                 }
             };
             const result = await usersCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+
+        // ********** Classes related APIs **********
+        // API for getting all classes to the UI/Client-side
+        app.get("/classes", async (req, res) => {
+            const result = await classesCollection.find().toArray();
+            res.send(result);
+        });
+
+        // Email-specific data-query API for getting instructor's created class on the UI/client-side
+        app.get("/myClasses/:email", async (req, res) => {
+            const email = req.params.email;
+            console.log(email);
+            const result = await classesCollection.find({ instructorEmail: req.params.email }).toArray();
+            res.send(result);
+        });
+
+
+        // API for adding class to the MongDB server
+        app.post("/classes", verifyJWT, verifyInstructor, async (req, res) => {
+            const newClass = req.body;
+            const result = await classesCollection.insertOne(newClass);
             res.send(result);
         });
 
