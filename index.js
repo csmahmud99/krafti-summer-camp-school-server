@@ -193,6 +193,7 @@ async function run() {
             res.send(result);
         });
 
+
         // Email-specific data-query API for getting instructor's created class on the UI/client-side
         app.get("/myClasses/:email", async (req, res) => {
             const email = req.params.email;
@@ -202,10 +203,37 @@ async function run() {
         });
 
 
+        // API for getting single-class data to update it on the basis of the 'defaultValue' inside the form-data [Get API]
+        app.get('/myClass/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = ({ _id: new ObjectId(id) })
+            const result = await classesCollection.findOne(query);
+            res.send(result);
+        });
+
+
         // API for adding class to the MongDB server
         app.post("/classes", verifyJWT, verifyInstructor, async (req, res) => {
             const newClass = req.body;
             const result = await classesCollection.insertOne(newClass);
+            res.send(result);
+        });
+
+
+        // API for fetching by the instructor to update class data
+        app.put("/classes/:id", async (req, res) => {
+            const id = req.params.id;
+            const body = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    nameClass: body.nameClass,
+                    image: body.image,
+                    seats: body.seats,
+                    price: body.price,
+                },
+            };
+            const result = await classesCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
 
