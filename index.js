@@ -50,7 +50,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
 
         // Creating a collection in the database for storing signed-up user's information
@@ -108,6 +108,7 @@ async function run() {
             const result = await usersCollection.find().toArray();
             res.send(result);
         });
+
 
         // API of Sending users to DB
         app.post("/users", async (req, res) => {
@@ -299,6 +300,15 @@ async function run() {
             res.send(result);
         });
 
+
+        /* // API for student selected classes post data
+        app.delete('/selectClass/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await cartsCollection.deleteOne(query);
+            res.send(result);
+        });
+ */
 
         // ********** Payment related APIs **********
         // API of Create payment Intent
