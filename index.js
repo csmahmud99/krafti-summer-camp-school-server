@@ -5,6 +5,7 @@ const cors = require("cors");
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 
 // middleware 
 app.use(cors());
@@ -55,6 +56,8 @@ async function run() {
         // Creating a collection in the database for storing signed-up user's information
         const usersCollection = client.db("kraftiDb").collection("users");
         const classesCollection = client.db("kraftiDb").collection("classes");
+        const cartsCollection = client.db("kraftiDb").collection("carts");
+        const paymentsCollection = client.db("kraftiDb").collection("payments");
 
 
         // ********** JWT related APIs **********
@@ -99,6 +102,12 @@ async function run() {
             res.send(result);
         });
 
+
+        // API for getting instructors info.s for the all-instructors page in the UI/Client-side
+        app.get("/instructors", async (req, res) => {
+            const result = await usersCollection.find().toArray();
+            res.send(result);
+        });
 
         // API of Sending users to DB
         app.post("/users", async (req, res) => {
@@ -220,6 +229,34 @@ async function run() {
         });
 
 
+        // API for Approving a class by state changing to 'Approved' by the Admin on UI/Client-side.
+        app.patch('/classes/approved/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: "Approved"
+                },
+            };
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+
+        // API for Denying a class by state changing to 'Denied' by the Admin on UI/Client-side.
+        app.patch('/classes/denied/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    status: "Denied"
+                },
+            };
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+
         // API for fetching by the instructor to update class data
         app.put("/classes/:id", async (req, res) => {
             const id = req.params.id;
@@ -235,6 +272,80 @@ async function run() {
             };
             const result = await classesCollection.updateOne(filter, updateDoc);
             res.send(result);
+        });
+
+
+        // ********** Selected Classes related APIs **********
+        // API for student email-specific selected class data
+        app.get('/selectClass', verifyJWT, async (req, res) => {
+            const email = req.query.email;
+            if (!email) {
+                res.send([]);
+            }
+            const decodedEmail = req.decoded.email;
+            if (email !== decodedEmail) {
+                return res.status(403).send({ error: true, message: 'forbidden access' });
+            }
+            const query = { email: email };
+            const result = await cartsCollection.find(query).toArray();
+            res.send(result);
+        });
+
+
+        // API for student selected classes post data
+        app.post('/selectClass', async (req, res) => {
+            const selectClass = req.body;
+            const result = await cartsCollection.insertOne(selectClass);
+            res.send(result);
+        });
+
+
+        // ********** Payment related APIs **********
+        // API of Create payment Intent
+        app.post('/createPaymentIntent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            console.log(amount);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            });
+        });
+
+
+        // Payment API Main
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const id = payment.payId;
+            const classId = payment.classId;
+            const seats = payment.seats - 1;
+            const enroll = payment.enroll + 1;
+            const insertResult = await paymentsCollection.insertOne(payment);
+            const query = { _id: new ObjectId(id) };
+            const deleteResult = await cartsCollection.deleteOne(query);
+            const filter = { _id: new ObjectId(classId) };
+            const updateDoc = {
+                $set: {
+                    seats: seats,
+                    enroll: enroll,
+                },
+            };
+            const result = await classesCollection.updateOne(filter, updateDoc);
+
+            res.send({ insertResult, deleteResult, result });
+        });
+
+
+        // ********** Enrolled Classes related APIs **********
+        //server get the call user email base data provide to user enroll classes
+        app.get('/enrolledStudent/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const enrolledClass = await paymentsCollection.find({ email: req.params.email}).toArray();
+            res.send(enrolledClass);
         });
 
         // Send a ping to confirm a successful connection
