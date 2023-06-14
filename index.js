@@ -344,9 +344,16 @@ async function run() {
         //server get the call user email base data provide to user enroll classes
         app.get('/enrolledStudent/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
-            const enrolledClass = await paymentsCollection.find({ email: req.params.email}).toArray();
+            const enrolledClass = await paymentsCollection.find({ email: req.params.email }).toArray();
             res.send(enrolledClass);
         });
+
+        //API of Providing Popular Classes in the UI-Home/Client-side Home
+        app.get('/popularClasses', async (req, res) => {
+            const popularClass = await classesCollection.find().sort({ enroll: -1 }).limit(6).toArray();
+            res.send(popularClass);
+        });
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
