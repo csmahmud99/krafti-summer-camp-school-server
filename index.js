@@ -311,6 +311,14 @@ async function run() {
  */
 
         // ********** Payment related APIs **********
+        // API for getting payment history of students
+        app.get('/payments/:email', verifyJWT, async (req, res) => {
+            const email = req.params.email;
+            const myAllPayments = await paymentsCollection.find({ email: email }).sort({ date: -1 }).toArray();
+            res.send(myAllPayments);
+        });
+
+
         // API of Create payment Intent
         app.post('/createPaymentIntent', verifyJWT, async (req, res) => {
             const { price } = req.body;
@@ -348,6 +356,8 @@ async function run() {
 
             res.send({ insertResult, deleteResult, result });
         });
+
+
 
 
         // ********** Enrolled Classes related APIs **********
